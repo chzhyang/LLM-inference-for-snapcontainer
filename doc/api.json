@@ -1,0 +1,355 @@
+{
+    "openapi": "3.0.2",
+    "info": {
+        "title": "FastAPI",
+        "version": "0.1.0"
+    },
+    "paths": {
+        "/v2/metrics": {
+            "get": {
+                "summary": "Metrics",
+                "operationId": "metrics_v2_metrics_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MetricsResponseModel"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/reinit": {
+            "post": {
+                "summary": "Reinit",
+                "operationId": "reinit_v2_reinit_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReinitRequestModel"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/completions": {
+            "post": {
+                "summary": "Completion",
+                "operationId": "completion_v2_completions_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CompletionRequestModel"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CompletionResponseModel"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/metrics": {
+            "get": {
+                "summary": "Metrics",
+                "operationId": "metrics_v1_metrics_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/reinit": {
+            "post": {
+                "summary": "Reinit",
+                "operationId": "reinit_v1_reinit_post",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/completions": {
+            "post": {
+                "summary": "Completion",
+                "operationId": "completion_v1_completions_post",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "CompletionRequestModel": {
+                "title": "CompletionRequestModel",
+                "required": [
+                    "prompt"
+                ],
+                "type": "object",
+                "properties": {
+                    "prompt": {
+                        "title": "Prompt",
+                        "type": "string"
+                    },
+                    "max_length": {
+                        "title": "Max Length",
+                        "type": "integer",
+                        "default": 1024
+                    },
+                    "top_p": {
+                        "title": "Top P",
+                        "type": "number",
+                        "default": 0.7
+                    },
+                    "temperature": {
+                        "title": "Temperature",
+                        "type": "number",
+                        "default": 0.95
+                    },
+                    "history": {
+                        "title": "History",
+                        "type": "array",
+                        "items": {},
+                        "default": []
+                    }
+                }
+            },
+            "CompletionResponseModel": {
+                "title": "CompletionResponseModel",
+                "required": [
+                    "status",
+                    "prompt",
+                    "completion",
+                    "prompt_tokens",
+                    "completion_tokens",
+                    "total_dur_s",
+                    "total_token_latency_s",
+                    "first_token_latency_ms",
+                    "next_token_latency_ms",
+                    "avg_token_latency_ms"
+                ],
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "title": "Status",
+                        "type": "integer"
+                    },
+                    "prompt": {
+                        "title": "Prompt",
+                        "type": "string"
+                    },
+                    "completion": {
+                        "title": "Completion",
+                        "type": "string"
+                    },
+                    "prompt_tokens": {
+                        "title": "Prompt Tokens",
+                        "type": "integer"
+                    },
+                    "completion_tokens": {
+                        "title": "Completion Tokens",
+                        "type": "integer"
+                    },
+                    "total_dur_s": {
+                        "title": "Total Dur S",
+                        "type": "number"
+                    },
+                    "total_token_latency_s": {
+                        "title": "Total Token Latency S",
+                        "type": "number"
+                    },
+                    "first_token_latency_ms": {
+                        "title": "First Token Latency Ms",
+                        "type": "number"
+                    },
+                    "next_token_latency_ms": {
+                        "title": "Next Token Latency Ms",
+                        "type": "number"
+                    },
+                    "avg_token_latency_ms": {
+                        "title": "Avg Token Latency Ms",
+                        "type": "number"
+                    }
+                }
+            },
+            "HTTPValidationError": {
+                "title": "HTTPValidationError",
+                "type": "object",
+                "properties": {
+                    "detail": {
+                        "title": "Detail",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ValidationError"
+                        }
+                    }
+                }
+            },
+            "MetricsResponseModel": {
+                "title": "MetricsResponseModel",
+                "required": [
+                    "status",
+                    "metrics"
+                ],
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "title": "Status",
+                        "type": "integer"
+                    },
+                    "metrics": {
+                        "title": "Metrics",
+                        "type": "object"
+                    }
+                }
+            },
+            "ReinitRequestModel": {
+                "title": "ReinitRequestModel",
+                "type": "object",
+                "properties": {
+                    "model_name": {
+                        "title": "Model Name",
+                        "type": "string"
+                    },
+                    "model_path": {
+                        "title": "Model Path",
+                        "type": "string"
+                    },
+                    "framework": {
+                        "title": "Framework",
+                        "type": "string"
+                    },
+                    "model_dtype": {
+                        "title": "Model Dtype",
+                        "type": "string"
+                    },
+                    "n_threads": {
+                        "title": "N Threads",
+                        "type": "integer"
+                    }
+                }
+            },
+            "ResponseModel": {
+                "title": "ResponseModel",
+                "required": [
+                    "status",
+                    "message"
+                ],
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "title": "Status",
+                        "type": "integer"
+                    },
+                    "message": {
+                        "title": "Message",
+                        "type": "string"
+                    }
+                }
+            },
+            "ValidationError": {
+                "title": "ValidationError",
+                "required": [
+                    "loc",
+                    "msg",
+                    "type"
+                ],
+                "type": "object",
+                "properties": {
+                    "loc": {
+                        "title": "Location",
+                        "type": "array",
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        }
+                    },
+                    "msg": {
+                        "title": "Message",
+                        "type": "string"
+                    },
+                    "type": {
+                        "title": "Error Type",
+                        "type": "string"
+                    }
+                }
+            }
+        }
+    }
+}
