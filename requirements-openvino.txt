@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+sse-starlette
+pydantic
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.1.0+cpu
+transformers==4.31.0
+accelerate
+bitsandbytes
+cpm_kernels
+sentencepiece
+protobuf
+openvino-dev==2023.2.0
+nncf==2.6.0
+einops
