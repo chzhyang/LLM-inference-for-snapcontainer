@@ -4,7 +4,7 @@ FROM ubuntu:${UBUNTU_VER} as demo
 ENV LANG C.UTF-8
 ENV http_proxy http://proxy-dmz.intel.com:911
 ENV https_proxy http://proxy-dmz.intel.com:912
-ENV no_proxy localhost,127.0.0.1,*.intel.com
+ENV no_proxy 127.0.0.1,127.0.1.1,localhost,.intel.com
 
 SHELL ["/bin/bash", "--login", "-c"]
 
@@ -33,11 +33,13 @@ SHELL ["conda", "run", "-n", "llmenv", "/bin/bash", "-c"]
 
 WORKDIR /app
 
+COPY models/llama2-7b-ov-int8 /models/llama2-7b-ov-int8
 COPY api.py adapter.py model_worker.py utils.py ./
+COPY torch-2.1.0+cpu-cp39-cp39-linux_x86_64.whl torch-2.1.0+cpu-cp39-cp39-linux_x86_64.whl
 COPY requirements-openvino.txt requirements.txt
 RUN pip install -r requirements.txt --no-cache-dir
 RUN rm requirements.txt
-# Replace libraries for performance data collection
+RUN rm torch-2.1.0+cpu-cp39-cp39-linux_x86_64.whl
 COPY extension/transformers/utils.py /opt/miniconda3/envs/llmenv/lib/python3.9/site-packages/transformers/generation/utils.py
 
 # KMP

@@ -2,15 +2,13 @@
 
 In this directory, you will find examples on how you could start LLM inference server, apply OpenVINO on Llama2 models.
 - Support model datatype: int8, INT8
-- Intel/OpenVINO accelerates LLM inference on Xeon platform, such as IR model, oneDNN(AMX, AVX512, VNNI), etc.
+- Intel/OpenVINO accelerates LLM inference on Xeon platform, such as IR model, oneDNN, etc.
 
 ## llama2-7b
 
-### 1. Prepare model and image
+### 1. Pull image
 
-Download model to '$MODEL_REPOSITORY/llama2-7b-ov-int8'(need 6GB+ disk)
-
-docker pull chzhyang/llm-server:v2-snap-2023.12.21
+docker pull ccr-registry.caas.intel.com/cnbench/llm-server:v2-snap-model-2023.12.26
 
 ### 2. Start LLM server
 
@@ -20,23 +18,21 @@ Config and start LLM server on docker, load `llama2-7b-ov-int8`(at least 15GB+ R
 
     ```shell
     docker run --privileged \
-    -v $MODEL_REPOSITORY/llama2-7b-ov-int8:/models/llama2-7b-ov-int8 \
     -e OMP_NUM_THREADS=30 \
-    -e MODEL_REPOSITORY=/models
+    -e MODEL_REPOSITORY=/models \
     -e MODEL_NAME=llama2-7b \
     -e MODEL_PATH=/models/llama2-7b-ov-int8 \
     -e FRAMEWORK=openvino \
     -e MODEL_DTYPE=int8 \
     -e SVC_PORT=8000 \
     -p 8000:8000 \
-    chzhyang/llm-server:v2-snap-2023.12.21
+    ccr-registry.caas.intel.com/cnbench/llm-server:v2-snap-model-2023.12.26
     ```
 
 - Option 2: Run container interactively and manually starting the server, use enviroment to config LLM server
 
     ```shell
     docker run --privileged \
-    -v $MODEL_REPOSITORY:/models \
      -e OMP_NUM_THREADS=30 \
     -e MODEL_REPOSITORY=/models \
     -e MODEL_NAME=llama2-7b \
@@ -45,8 +41,8 @@ Config and start LLM server on docker, load `llama2-7b-ov-int8`(at least 15GB+ R
     -e MODEL_DTYPE=int8 \
     -e SVC_PORT=8000 \
     -p 8000:8000 \
-    chzhyang/llm-server:v2-snap-2023.12.21 -it \
-    /bin/bash
+    ccr-registry.caas.intel.com/cnbench/llm-server:v2-snap-model-2023.12.26 \
+     -it /bin/bash
     ```
 
     Start LLM server in contianer
@@ -61,10 +57,9 @@ Config and start LLM server on docker, load `llama2-7b-ov-int8`(at least 15GB+ R
 
     ```shell
     docker run --privileged \
-    -v $MODEL_REPOSITORY:/models \
     -p 8000:8000 \
     -it \
-    chzhyang/llm-server:v2-snap-2023.12.21 \
+    ccr-registry.caas.intel.com/cnbench/llm-server:v2-snap-model-2023.12.26 \
     /bin/bash
     ```
 

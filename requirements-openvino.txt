@@ -1,9 +1,11 @@
 fastapi
 uvicorn
 sse-starlette
+# -f https://download.pytorch.org/whl/torch_stable.html
+# --extra-index-url https://download.pytorch.org/whl/cpu
+# torch==2.1.0+cpu
 pydantic
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.1.0+cpu
+torch==2.1.0 --find-links=./torch-2.1.0+cpu-cp39-cp39-linux_x86_64.whl
 transformers==4.31.0
 accelerate
 bitsandbytes
