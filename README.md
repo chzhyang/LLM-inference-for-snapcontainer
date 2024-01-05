@@ -19,7 +19,7 @@ Large language models(LLM) inference server on Intel/Xeon platform.
 
 | Image       | Size| Description | 
 | ----------- | --- | --- |
-| ccr-registry.caas.intel.com/cnbench/llm-server:v2-snap-model-2023.12.26 | 14.3GB | contains llama2-7b-ov-int8, for snapcontainer |
+| ccr-registry.caas.intel.com/cnbench/snapcontainer-llama2-7b-int8-model:latest | 14.3GB | contains llama2-7b-ov-int8, for snapcontainer |
 | ccr-registry.caas.intel.com/cnbench/llm-server:v2-snap-2023.12.21 | 3.36GB | use shared model, for snapcontainer |
 | chzhyang/llm-server:v2-slim | 547MB | Slimed image using shared packages |
 | chzhyang/llm-server:v2 | 6.37GB | |

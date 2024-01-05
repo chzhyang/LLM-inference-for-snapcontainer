@@ -8,7 +8,7 @@ In this directory, you will find examples on how you could start LLM inference s
 
 ### 1. Pull image
 
-docker pull ccr-registry.caas.intel.com/cnbench/llm-server:v2-snap-model-2023.12.26
+docker pull ccr-registry.caas.intel.com/cnbench/snapcontainer-llama2-7b-int8-model:latest
 
 ### 2. Start LLM server
 
@@ -26,7 +26,7 @@ Config and start LLM server on docker, load `llama2-7b-ov-int8`(at least 15GB+ R
     -e MODEL_DTYPE=int8 \
     -e SVC_PORT=8000 \
     -p 8000:8000 \
-    ccr-registry.caas.intel.com/cnbench/llm-server:v2-snap-model-2023.12.26
+    ccr-registry.caas.intel.com/cnbench/snapcontainer-llama2-7b-int8-model:latest
     ```
 
 - Option 2: Run container interactively and manually starting the server, use enviroment to config LLM server
@@ -41,7 +41,7 @@ Config and start LLM server on docker, load `llama2-7b-ov-int8`(at least 15GB+ R
     -e MODEL_DTYPE=int8 \
     -e SVC_PORT=8000 \
     -p 8000:8000 \
-    ccr-registry.caas.intel.com/cnbench/llm-server:v2-snap-model-2023.12.26 \
+    ccr-registry.caas.intel.com/cnbench/snapcontainer-llama2-7b-int8-model:latest \
      -it /bin/bash
     ```
 
@@ -59,7 +59,7 @@ Config and start LLM server on docker, load `llama2-7b-ov-int8`(at least 15GB+ R
     docker run --privileged \
     -p 8000:8000 \
     -it \
-    ccr-registry.caas.intel.com/cnbench/llm-server:v2-snap-model-2023.12.26 \
+    ccr-registry.caas.intel.com/cnbench/snapcontainer-llama2-7b-int8-model:latest \
     /bin/bash
     ```
 
@@ -91,4 +91,3 @@ Config and start LLM server on docker, load `llama2-7b-ov-int8`(at least 15GB+ R
         -H 'Content-Type: application/json' \
         -d '{"prompt": "What is AI?", "max_length":32, "history": []}'
     ```
-

@@ -1,5 +1,5 @@
 from adapter import TransformersAdapter, OpenvinoAdapter
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 import logging as log
 import sys
 from typing import Optional
@@ -14,6 +14,7 @@ framework_to_adapter = {
 
 
 class ReinitRequestModel(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
     model_name: str = ""
     model_path: str = ""
     framework: str = ""

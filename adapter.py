@@ -49,47 +49,28 @@ class TransformersAdapter(BaseAdapter):
             device = device,
             warmup = warmup,
         )
-        if model_family == 'llama':
-            from transformers import LlamaTokenizer, AutoModelForCausalLM
-            log.info(" Loading tokenizer")
-            self.tokenizer = LlamaTokenizer.from_pretrained(
-                model_path, trust_remote_code=True)
-            log.info(" Loading model")
-            if model_dtype == "fp32":
-                # self.model = AutoModelForCausalLM.from_pretrained(
-                #     model_path,
-                #     device_map="cpu")
-                self.model = AutoModelForCausalLM.from_pretrained(
-                    model_path)
-            elif model_dtype == "bf16":
-                self.model = AutoModelForCausalLM.from_pretrained(
-                    model_path,
-                    device_map="auto",
-                    torch_dtype=torch.bfloat16)
-        else:
-            from transformers import AutoTokenizer
-            log.info("Loading tokenizer")
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                model_path, trust_remote_code=True)
-            from transformers import AutoModel, AutoModelForCausalLM
-            log.info("Loading model")
-            if model_dtype == "fp32":
-                self.model = AutoModel.from_pretrained(
-                    model_path,
-                    trust_remote_code=True).float()
-            elif model_dtype == "bf16":
-                self.model = AutoModel.from_pretrained(
-                    model_path, device_map="cpu",
-                    torch_dtype=torch.bfloat16,
-                    trust_remote_code=True)
-            elif model_dtype == "int4":
-                self.model = AutoModel.from_pretrained(model_path,
-                                                       trust_remote_code=True).float()
-        if self.model:
-            self.model = self.model.eval()
-        if self.warmup:
+        from transformers import AutoTokenizer, AutoModel
+        import intel_extension_for_pytorch as ipex
+        log.info("Loading tokenizer")
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            model_path,
+            trust_remote_code=True
+        )
+        log.info("Loading model")
+        if model_dtype == "bf16":
+            self.model = AutoModel.from_pretrained(
+                model_path,
+                trust_remote_code=True,
+                torch_dtype=torch.bfloat16
+            )
+            if self.model:
+                self.model = self.model.eval()
+            enable_ipex=True
+            if enable_ipex:
+                qconfig = ipex.quantization.get_weight_only_quant_qconfig_mapping()
+                self.model = ipex.optimize_transformers(self.model, dtype=torch.bfloat16)
+            if self.warmup:
                 self._warmup(WARMUP_PROMPT)
-
     def _warmup(self, prompt):
         with torch.inference_mode():
             input_ids = self.tokenizer.encode(prompt, return_tensors="pt")
