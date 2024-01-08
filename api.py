@@ -30,8 +30,6 @@ async def completion(request: Request, request_data: CompletionRequestModel):
     max_length = request_data.max_length
     top_p = request_data.top_p
     temperature = request_data.temperature
-    num_beams = request_data.num_beams
-    do_sample = request_data.do_sample
 
     if not prompt:
         raise HTTPException(status_code=400, detail='Need a prompt')
@@ -40,11 +38,9 @@ async def completion(request: Request, request_data: CompletionRequestModel):
     st = time.perf_counter()
     result = worker.adapter.create_completion(prompt=prompt,
                                               max_new_tokens=max_length if max_length is not None else 1024,
-                                              num_beams=num_beams if num_beams is not None else 1,
-                                              do_sample=do_sample if do_sample is not None else False,
                                               top_p=top_p if top_p is not None else 0.7,
                                               temperature=temperature if temperature is not None else 0.95,
-                                              stream=False)
+                                              )
     end = time.perf_counter()
 
     response_data = {
@@ -54,10 +50,6 @@ async def completion(request: Request, request_data: CompletionRequestModel):
         "prompt_tokens": result["prompt_tokens"],
         "completion_tokens": result["completion_tokens"],
         "total_dur_s": end - st,
-        "total_token_latency_s": result["total_token_latency_s"],
-        "first_token_latency_ms": result["first_token_latency_ms"],
-        "next_token_latency_ms": result["next_token_latency_ms"],
-        "avg_token_latency_ms": result["avg_token_latency_ms"]
     }
 
     return response_data
@@ -74,8 +66,8 @@ def get_support_list():
 def get_model_family(model_name):
     if "llama" in model_name:
         model_family = "llama"
-    elif "chatglm" in model_name:
-        model_family = "chatglm"
+    elif "opt" in model_name:
+        model_family = "opt"
     else:
         raise ValueError(
             f'Unsupported model {model_name}')
@@ -97,7 +89,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--device', type=str, choices=["CPU", "GPU"], default="CPU", help='device for inference')
     parser.add_argument('-m', '--model-name', type=str,
-                        choices=["llama2-7b", "chatglm2-6b"], help='LLM to load')
+                        choices=["opt-1.3b", "llama2-7b", "chatglm2-6b", "gpt-j-6b"], help='LLM to load')
     parser.add_argument('-o', '--model-online',
                         action="store_true", help='Load model online')
     parser.add_argument('-d', '--model-path', type=str,
@@ -106,8 +98,7 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--metric_port', type=int,
                         default=8090, help='Metric port')
     parser.add_argument('-f', '--framework', type=str,
-                        choices=["transformers", "bigdl-llm-cpp",
-                                 "bigdl-llm-transformers", "openvino"],
+                        choices=["ipex", "openvino"],
                         help='Inference framework')
     parser.add_argument('-t', '--model-dtype', type=str,
                         choices=["fp32", "bf16", "int8", "int4"], help='Model data type')

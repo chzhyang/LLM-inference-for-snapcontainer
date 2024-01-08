@@ -8,10 +8,9 @@ log.basicConfig(format='[ %(levelname)s ] %(message)s',
                     level=log.INFO, stream=sys.stdout)
 
 framework_to_adapter = {
-    "transformers": TransformersAdapter,
+    "ipex": TransformersAdapter,
     "openvino": OpenvinoAdapter,
 }
-
 
 class ReinitRequestModel(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
@@ -51,24 +50,16 @@ class CompletionResponseModel(BaseModel):
     prompt_tokens: int
     completion_tokens: int
     total_dur_s: float
-    total_token_latency_s: float
-    first_token_latency_ms: float
-    next_token_latency_ms: float
-    avg_token_latency_ms: float
-
 
 support_list = {
-    "transformers": {
-        "llama2-7b": {
-            "datatype": ["fp32", "bf16"],
-        },
-        "chatglm2-6b": {
-            "datatype": ["fp32", "bf16", "int4"],
+    "ipex": {
+        "opt-1.3b": {
+            "datatype": ["bf16"],
         }
     },
     "openvino": {
         "llama2-7b": {
-            "datatype": ["bf16", "int8"],
+            "datatype": ["int8"],
         }
     },
 }

@@ -49,7 +49,7 @@ class TransformersAdapter(BaseAdapter):
             device = device,
             warmup = warmup,
         )
-        from transformers import AutoTokenizer, AutoModel
+        from transformers import AutoTokenizer, OPTForCausalLM
         import intel_extension_for_pytorch as ipex
         log.info("Loading tokenizer")
         self.tokenizer = AutoTokenizer.from_pretrained(
@@ -57,20 +57,12 @@ class TransformersAdapter(BaseAdapter):
             trust_remote_code=True
         )
         log.info("Loading model")
-        if model_dtype == "bf16":
-            self.model = AutoModel.from_pretrained(
-                model_path,
-                trust_remote_code=True,
-                torch_dtype=torch.bfloat16
-            )
-            if self.model:
-                self.model = self.model.eval()
-            enable_ipex=True
-            if enable_ipex:
-                qconfig = ipex.quantization.get_weight_only_quant_qconfig_mapping()
-                self.model = ipex.optimize_transformers(self.model, dtype=torch.bfloat16)
+        if model_family=='opt'and model_dtype == "bf16":
+            self.model = OPTForCausalLM.from_pretrained(model_path).eval()
+            self.model = ipex.optimize_transformers(self.model, dtype=torch.bfloat16)
             if self.warmup:
                 self._warmup(WARMUP_PROMPT)
+
     def _warmup(self, prompt):
         with torch.inference_mode():
             input_ids = self.tokenizer.encode(prompt, return_tensors="pt")
@@ -81,50 +73,35 @@ class TransformersAdapter(BaseAdapter):
             prompt,
             max_new_tokens,
             top_p, temperature,
-            num_beams,
-            do_sample,
-            stream=False
     ):
-        if not stream:
-            with torch.inference_mode():
-                perf = {"latency": []}
-                log.info(f'Start generating')
-                st = time.time()
-                input_ids = self.tokenizer.encode(prompt, return_tensors="pt")
-                output_ids = self.model.generate(
-                    input_ids,
-                    max_new_tokens=max_new_tokens,
-                    top_p=top_p,
-                    temperature=temperature,
-                    num_beams=num_beams,
-                    do_sample=do_sample,
-                    perf=perf
-                )
-                prompt_tokens = input_ids.shape[1]
-                completion_ids = output_ids[0].tolist()[prompt_tokens:]
-                completion = self.tokenizer.decode(
-                    completion_ids, skip_special_tokens=True)
-                end = time.time()
+        log.info(f'Start generating')
+        st = time.time()
+        inputs = self.tokenizer(prompt, return_tensors="pt")
+        input_ids=inputs['input_ids']
+        output_ids = self.model.generate(
+            inputs=input_ids,
+            max_new_tokens=max_new_tokens,
+            top_p=top_p,
+            temperature=temperature,
+            num_beams=1,
+            do_sample=False,
+            attention_mask = inputs["attention_mask"],
+            eos_token_id=self.tokenizer.eos_token_id,
+            pad_token_id=self.tokenizer.eos_token_id,
+        )
+        prompt_tokens = input_ids.shape[1]
+        completion_ids = output_ids[0].tolist()[prompt_tokens:]
+        completion = self.tokenizer.decode(
+            completion_ids, skip_special_tokens=True)
+        end = time.time()
 
-                latency = perf["latency"]
-                resp = {
-                    "completion": completion,
-                    "prompt_tokens": prompt_tokens,
-                    "total_dur_s": end-st,  # total time, include tokeninzer.encode+decode, tokens generation
-                    "completion_tokens": len(completion_ids),
-                    # total tokens completion latency, except tokenizer.decode time
-                    "total_token_latency_s": sum(latency),
-                    # first token completion latency
-                    "first_token_latency_ms": latency[0]*1000 if len(latency) > 0 else 0,
-                    # next token completion latency
-                    "next_token_latency_ms": sum(latency[1:])*1000 / len(latency[1:]) if len(latency) > 1 else 0,
-                    # average token completion latency
-                    "avg_token_latency_ms": sum(latency)*1000 / len(latency) if len(latency) > 0 else 0,
-                }
-                return resp
-        else:
-            # TODO stream
-            pass
+        resp = {
+            "completion": completion,
+            "prompt_tokens": prompt_tokens,
+            "total_dur_s": end-st,
+            "completion_tokens": len(completion_ids),
+        }
+        return resp
 
 import openvino as ov
 from openvino.runtime import Core, Tensor
@@ -147,52 +124,38 @@ class OpenvinoAdapter(BaseAdapter):
             from transformers import LlamaTokenizer
             self.tokenizer = LlamaTokenizer.from_pretrained(
                 model_path)
-        else:
-            from transformers import AutoTokenizer
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                model_path, trust_remote_code=True)
+            if model_dtype in ['int8']:
+                log.info("Loading model")
+                from pathlib import Path
+                ir_model = Path(model_path) / "openvino_model.xml"
+                core = Core()
+                self.model = core.read_model(ir_model)
+                self.input_names = {
+                    key.get_any_name(): idx
+                    for idx, key in enumerate(self.model.inputs)
+                }
+                self.output_names = {key.get_any_name(): idx for idx, key in enumerate(self.model.outputs)}
+                self.key_value_input_names = [key for key in self.input_names if "key_values" in key]
+                self.key_value_output_names = [key for key in self.output_names if "present" in key]
+                ov_config = {
+                    ov.properties.cache_dir(): "",
+                    'PERFORMANCE_HINT': 'LATENCY',
+                }
+                import os
+                num_cpus = len(os.sched_getaffinity(0))
+                if self.n_threads is not None and self.n_threads > num_cpus:
+                    self.n_threads = num_cpus
+                    ov_config[ov.properties.inference_num_threads()] = self.n_threads
+                    
+                compiled_model = core.compile_model(
+                    model=self.model, 
+                    device_name=device,
+                    config=ov_config,
+                )
 
-        if model_family == 'llama' and model_dtype in ['bf16', 'int8']:
-            log.info("Loading model")
-            from pathlib import Path
-            ir_model = Path(model_path) / "openvino_model.xml"
-            core = Core()
-            self.model = core.read_model(ir_model)
-            self.input_names = {
-                key.get_any_name(): idx
-                for idx, key in enumerate(self.model.inputs)
-            }
-            self.output_names = {
-                key.get_any_name(): idx
-                for idx, key in enumerate(self.model.outputs)
-            }
-            self.key_value_input_names = [
-                key for key in self.input_names if "key_values" in key
-            ]
-            self.key_value_output_names = [
-                key for key in self.output_names if "present" in key
-            ]
-            ov_config = {
-                ov.properties.cache_dir(): "",
-                'PERFORMANCE_HINT': 'LATENCY',
-            }
-            
-            # n_threads must be less than or equal to the number of cpu affinity
-            import os
-            num_cpus = len(os.sched_getaffinity(0))
-            if self.n_threads is not None and self.n_threads > num_cpus:
-                self.n_threads = num_cpus
-                ov_config[ov.properties.inference_num_threads()] = self.n_threads
-                
-            compiled_model = core.compile_model(
-                model=self.model, 
-                device_name=device,
-                config=ov_config,
-            )
-
-            self.request = compiled_model.create_infer_request()
-            if self.warmup:
-                self._warmup(WARMUP_PROMPT)
+                self.request = compiled_model.create_infer_request()
+                if self.warmup:
+                    self._warmup(WARMUP_PROMPT)
     
     def softmax(self, x):
         e_x = np.exp(x - np.max(x, axis=-1, keepdims=True))
@@ -209,81 +172,69 @@ class OpenvinoAdapter(BaseAdapter):
         top_k = min(max(top_k, 1), scores.shape[-1])
         top_k_scores = -np.sort(-scores)[:, :top_k]
         indices_to_remove = scores < np.min(top_k_scores)
-        filtred_scores = np.ma.array(scores,
-                                    mask=indices_to_remove,
-                                    fill_value=filter_value).filled()
+        filtred_scores = np.ma.array(
+            scores,
+            mask=indices_to_remove,
+            fill_value=filter_value
+        ).filled()
         return filtred_scores
 
-    def generate_sequence(self, sampling, input_ids, attention_mask, eos_token_id,
-                        max_sequence_length, perf: Optional[dict]=None):
-        if perf is None:
-            perf = {"latency":[]}
-        latency = perf["latency"]
-        st = time.perf_counter()
-
+    def generate_sequence(
+        self,
+        input_ids,
+        attention_mask,
+        eos_token_id,
+        max_sequence_length,
+        top_p=0.7,
+        top_k=20,
+        temperature=0.95,
+        perf: Optional[dict]=None
+    ):
         past_key_values = None
         prompt_len = len(input_ids[0])
-
         while True:
-            try:
-                inputs = {}
-                if past_key_values is not None:
-                    inputs = dict(zip(self.key_value_input_names, past_key_values))
-                    inputs["input_ids"] = input_ids[:, -1:]
-                    cur_input_len = 1
-                else:
-                    inputs["input_ids"] = input_ids
-                    shape_input_ids = input_ids.shape
-                    num_attention_heads = 1
-                    for input_name in self.key_value_input_names:
-                        model_inputs = self.model.input(input_name)
-                        shape = model_inputs.get_partial_shape()
-                        shape[0] = shape_input_ids[0] * num_attention_heads
-                        if shape[2].is_dynamic:
-                            shape[2] = 0
-                        if shape[1].is_dynamic:
-                            shape[1] = 0
-                        inputs[input_name] = Tensor(model_inputs.get_element_type(),
-                                                    shape.get_shape())
-                cur_input_len = len(inputs["input_ids"][0])
-                if "attention_mask" in self.input_names and attention_mask is not None:
-                    inputs["attention_mask"] = attention_mask
-                self.request.start_async(inputs, share_inputs=True)
-                self.request.wait()
-                logits = self.request.get_tensor("logits").data
-                past_key_values = tuple(
-                    self.request.get_tensor(key).data for key in self.key_value_output_names)
-                next_token_logits = logits[:, cur_input_len - 1, :]
-                # pre-process distribution
-                next_token_scores = self.process_logits(len(input_ids[0]),
-                                                next_token_logits, eos_token_id)
-                top_k = 20
-                next_token_scores = self.get_top_k_logits(next_token_scores, top_k)
-                # get next token id
-                if sampling:
-                    probs = self.softmax(next_token_scores)
-                    next_tokens = np.random.choice(probs.shape[-1],
-                                                1,
-                                                p=probs[0],
-                                                replace=True)
-                else:
-                    next_tokens = np.argmax(next_token_scores, axis=-1) # greedy search
-                # break the loop if max length or end of text token is reached
-                if (len(input_ids[0]) - prompt_len
-                        ) == max_sequence_length or next_tokens == eos_token_id:
-                    # end = time.perf_counter()
-                    # latency.append(end - st)
-                    break
-                else:
-                    input_ids = np.concatenate((input_ids, [next_tokens]), axis=-1)
-                    attention_mask = np.concatenate(
-                        (attention_mask, [[1] * len(next_tokens)]), axis=-1)
-
-            finally:
-                end = time.perf_counter()
-                latency.append(end - st)
-                st = end
-
+            inputs = {}
+            if past_key_values is not None:
+                inputs = dict(zip(self.key_value_input_names, past_key_values))
+                inputs["input_ids"] = input_ids[:, -1:]
+                cur_input_len = 1
+            else:
+                inputs["input_ids"] = input_ids
+                shape_input_ids = input_ids.shape
+                num_attention_heads = 1
+                for input_name in self.key_value_input_names:
+                    model_inputs = self.model.input(input_name)
+                    shape = model_inputs.get_partial_shape()
+                    shape[0] = shape_input_ids[0] * num_attention_heads
+                    if shape[2].is_dynamic:
+                        shape[2] = 0
+                    if shape[1].is_dynamic:
+                        shape[1] = 0
+                    inputs[input_name] = Tensor(model_inputs.get_element_type(),
+                                                shape.get_shape())
+            cur_input_len = len(inputs["input_ids"][0])
+            if "attention_mask" in self.input_names and attention_mask is not None:
+                inputs["attention_mask"] = attention_mask
+            self.request.start_async(inputs, share_inputs=True)
+            self.request.wait()
+            logits = self.request.get_tensor("logits").data
+            past_key_values = tuple(
+                self.request.get_tensor(key).data for key in self.key_value_output_names)
+            next_token_logits = logits[:, cur_input_len - 1, :]
+            next_token_scores = self.process_logits(
+                len(input_ids[0]),
+                next_token_logits,
+                eos_token_id
+            )
+            next_token_scores = self.get_top_k_logits(next_token_scores, top_k)
+            next_tokens = np.argmax(next_token_scores, axis=-1) # greedy search
+            if (len(input_ids[0]) - prompt_len
+                    ) == max_sequence_length or next_tokens == eos_token_id:
+                break
+            else:
+                input_ids = np.concatenate((input_ids, [next_tokens]), axis=-1)
+                attention_mask = np.concatenate(
+                    (attention_mask, [[1] * len(next_tokens)]), axis=-1)
         return input_ids
     
     def _warmup(self, prompt):
@@ -292,54 +243,36 @@ class OpenvinoAdapter(BaseAdapter):
         input_ids = inputs["input_ids"]
         attention_mask = inputs["attention_mask"]
         _ = self.generate_sequence(
-            sampling=False,
             input_ids=input_ids,
             attention_mask=attention_mask,
             max_sequence_length=50,
             eos_token_id=self.tokenizer.eos_token_id
         )
 
-    def create_completion(self, prompt, max_new_tokens, top_p, temperature, num_beams, do_sample, stream=False):
-        if not stream:
-            perf = {"latency": [], }
-            log.info(f'Start generating')
-            st = time.perf_counter()
-            inputs = self.tokenizer(prompt, return_tensors="np")
-            input_ids = inputs["input_ids"]
-            attention_mask = attention_mask = inputs["attention_mask"]
-            output_ids = self.generate_sequence(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                max_sequence_length=max_new_tokens if max_new_tokens else 2048,
-                # top_p=top_p if top_p else 0.7,
-                # temperature=temperature if temperature else 0.95,
-                eos_token_id=self.tokenizer.eos_token_id,
-                sampling=do_sample,
-                perf=perf)
-            prompt_tokens = input_ids.shape[1]
-            completion_ids = output_ids[0].tolist()[prompt_tokens:]
-            completion = self.tokenizer.decode(
-                completion_ids, skip_special_tokens=True)
-            end = time.perf_counter()
-
-            latency = perf["latency"]
-            resp = {
-                "completion": completion,
-                "prompt_tokens": prompt_tokens,
-                "total_dur_s": end-st,  # total time, include tokeninzer.encode+decode, tokens generation
-                "completion_tokens": len(completion_ids),
-                # total tokens completion latency, except tokenizer.decode time
-                "total_token_latency_s": sum(latency),
-                # first token completion latency
-                "first_token_latency_ms": latency[0]*1000 if len(latency) > 0 else 0,
-                # next token completion latency
-                "next_token_latency_ms": sum(latency[1:])*1000 / len(latency[1:]) if len(latency) > 1 else 0,
-                # average token completion latency
-                "avg_token_latency_ms": sum(latency)*1000 / len(latency) if len(latency) > 0 else 0,
-            }
-            return resp
-        else:
-            # TODO stream
-            pass
-        return
+    def create_completion(self, prompt, max_new_tokens, top_p, temperature, do_sample):
+        log.info(f'Start generating')
+        st = time.perf_counter()
+        inputs = self.tokenizer(prompt, return_tensors="np")
+        input_ids = inputs["input_ids"]
+        attention_mask = attention_mask = inputs["attention_mask"]
+        output_ids = self.generate_sequence(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            max_sequence_length=max_new_tokens if max_new_tokens else 2048,
+            top_p=top_p if top_p else 0.7,
+            temperature=temperature if temperature else 0.95,
+            eos_token_id=self.tokenizer.eos_token_id,
+        )
+        prompt_tokens = input_ids.shape[1]
+        completion_ids = output_ids[0].tolist()[prompt_tokens:]
+        completion = self.tokenizer.decode(
+            completion_ids, skip_special_tokens=True)
+        end = time.perf_counter()
+        resp = {
+            "completion": completion,
+            "prompt_tokens": prompt_tokens,
+            "total_dur_s": end-st,  # total time, include tokeninzer.encode+decode, tokens generation
+            "completion_tokens": len(completion_ids),
+        }
+        return resp
     
