@@ -24,7 +24,7 @@ Config and start LLM server on docker, load `opt-1.3b`
     -e MODEL_DTYPE=bf16 \
     -e SVC_PORT=8000 \
     -p 8000:8000 \
-    ccr-registry.caas.intel.com/cnbench/snapcontainer-opt-1.3b-bf16-model:latest
+    ccr-registry.caas.intel.com/cnbench/snapcontainer-llm:latest
     ```
 
 - Option 2: Run container interactively and manually starting the server, use command flags to config LLM server
@@ -34,7 +34,7 @@ Config and start LLM server on docker, load `opt-1.3b`
     -v $MODEL_REPOSITORY/opt-1.3b:/models/opt-1.3b \
     -p 8000:8000 \
     -it \
-    ccr-registry.caas.intel.com/cnbench/snapcontainer-opt-1.3b-bf16-model:latest \
+    ccr-registry.caas.intel.com/cnbench/snapcontainer-llm:latest \
     /bin/bash
     ```
 

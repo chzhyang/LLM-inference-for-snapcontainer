@@ -1,7 +1,7 @@
 # Llama2
 
 In this directory, you will find examples on how you could start LLM inference server, apply OpenVINO on Llama2 models.
-- Support model datatype: int8, INT8
+- Support model datatype: INT8
 - Intel/OpenVINO accelerates LLM inference on Xeon platform, such as IR model, oneDNN, etc.
 
 ## llama2-7b
@@ -26,7 +26,7 @@ Config and start LLM server on docker, load `llama2-7b-ov-int8`(at least 15GB+ R
     -e MODEL_DTYPE=int8 \
     -e SVC_PORT=8000 \
     -p 8000:8000 \
-    ccr-registry.caas.intel.com/cnbench/snapcontainer-llama2-7b-int8-model:latest
+    ccr-registry.caas.intel.com/cnbench/snapcontainer-llm:latest
     ```
 
 - Option 2: Run container interactively and manually starting the server, use enviroment to config LLM server
@@ -41,7 +41,7 @@ Config and start LLM server on docker, load `llama2-7b-ov-int8`(at least 15GB+ R
     -e MODEL_DTYPE=int8 \
     -e SVC_PORT=8000 \
     -p 8000:8000 \
-    ccr-registry.caas.intel.com/cnbench/snapcontainer-llama2-7b-int8-model:latest \
+    ccr-registry.caas.intel.com/cnbench/snapcontainer-llm:latest \
      -it /bin/bash
     ```
 
@@ -59,7 +59,7 @@ Config and start LLM server on docker, load `llama2-7b-ov-int8`(at least 15GB+ R
     docker run --privileged \
     -p 8000:8000 \
     -it \
-    ccr-registry.caas.intel.com/cnbench/snapcontainer-llama2-7b-int8-model:latest \
+    ccr-registry.caas.intel.com/cnbench/snapcontainer-llm:latest \
     /bin/bash
     ```
 
