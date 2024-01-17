@@ -8,7 +8,8 @@ log.basicConfig(format='[ %(levelname)s ] %(message)s',
                     level=log.INFO, stream=sys.stdout)
 
 framework_to_adapter = {
-    "ipex": TransformersAdapter,
+    # "ipex": TransformersAdapter,
+    "transformers": TransformersAdapter,
     "openvino": OpenvinoAdapter,
 }
 
@@ -52,6 +53,11 @@ class CompletionResponseModel(BaseModel):
     total_dur_s: float
 
 support_list = {
+    "transformers": {
+        "opt-1.3b": {
+            "datatype": ["fp16"],
+        }
+    },
     "ipex": {
         "opt-1.3b": {
             "datatype": ["bf16"],

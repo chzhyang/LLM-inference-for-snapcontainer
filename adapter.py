@@ -50,16 +50,16 @@ class TransformersAdapter(BaseAdapter):
             warmup = warmup,
         )
         from transformers import AutoTokenizer, OPTForCausalLM
-        import intel_extension_for_pytorch as ipex
+        # import intel_extension_for_pytorch as ipex
         log.info("Loading tokenizer")
         self.tokenizer = AutoTokenizer.from_pretrained(
             model_path,
             trust_remote_code=True
         )
         log.info("Loading model")
-        if model_family=='opt'and model_dtype == "bf16":
+        if model_family=='opt':
             self.model = OPTForCausalLM.from_pretrained(model_path).eval()
-            self.model = ipex.optimize_transformers(self.model, dtype=torch.bfloat16)
+            # self.model = ipex.optimize_transformers(self.model)
             if self.warmup:
                 self._warmup(WARMUP_PROMPT)
 

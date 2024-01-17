@@ -98,10 +98,9 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--metric_port', type=int,
                         default=8090, help='Metric port')
     parser.add_argument('-f', '--framework', type=str,
-                        choices=["ipex", "openvino"],
                         help='Inference framework')
     parser.add_argument('-t', '--model-dtype', type=str,
-                        choices=["fp32", "bf16", "int8", "int4"], help='Model data type')
+                        choices=["fp32", "fp16", "bf16", "int8", "int4"], help='Model data type')
     parser.add_argument('-i', '--ipex', action="store_true",
                         help='Use IPEX(intel-extension-for-pytorch)')
     parser.add_argument('-n', '--n-threads', type=int,

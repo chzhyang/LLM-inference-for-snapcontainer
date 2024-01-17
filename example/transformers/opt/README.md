@@ -20,8 +20,8 @@ Config and start LLM server on docker, load `opt-1.3b`
     -e OMP_NUM_THREADS=36 \
     -e MODEL_NAME=opt-1.3b \
     -e MODEL_PATH=/models/opt-1.3b \
-    -e FRAMEWORK=ipex \
-    -e MODEL_DTYPE=bf16 \
+    -e FRAMEWORK=transformers \
+    -e MODEL_DTYPE=fp16 \
     -e SVC_PORT=8000 \
     -p 8000:8000 \
     ccr-registry.caas.intel.com/cnbench/snapcontainer-llm:latest
@@ -46,8 +46,8 @@ Config and start LLM server on docker, load `opt-1.3b`
     OMP_NUM_THREADS=36 numactl -C 0-35 -m 0 python3 api.py \
     -m opt-1.3b \
     -d /models/opt-1.3b \
-    -f ipex \
-    -t bf16 \
+    -f transformers \
+    -t fp16 \
     -p 8000
     ```
 
