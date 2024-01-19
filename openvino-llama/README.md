@@ -26,40 +26,16 @@ Config and start LLM server on docker, load `llama2-7b-ov-int8`(at least 15GB+ R
     -e MODEL_DTYPE=int8 \
     -e SVC_PORT=8000 \
     -p 8000:8000 \
-    ccr-registry.caas.intel.com/cnbench/snapcontainer-llm:latest
+    ccr-registry.caas.intel.com/cnbench/snapcontainer-llm-openvino-llama:latest
     ```
 
-- Option 2: Run container interactively and manually starting the server, use enviroment to config LLM server
-
-    ```shell
-    docker run --privileged \
-     -e OMP_NUM_THREADS=30 \
-    -e MODEL_REPOSITORY=/models \
-    -e MODEL_NAME=llama2-7b \
-    -e MODEL_PATH=/models/llama2-7b-ov-int8 \
-    -e FRAMEWORK=openvino \
-    -e MODEL_DTYPE=int8 \
-    -e SVC_PORT=8000 \
-    -p 8000:8000 \
-    ccr-registry.caas.intel.com/cnbench/snapcontainer-llm:latest \
-     -it /bin/bash
-    ```
-
-    Start LLM server in contianer
-
-    ```shell
-    conda init bash && exec bash -l
-    conda activate llmenv
-    OMP_NUM_THREADS=30 numactl -C 0-29 -m 0 python api.py
-    ```
-
-- Option 3: Run container interactively and manually starting the server, use command flags to config LLM server
+- Option 2: Run container interactively and manually starting the server, use command flags to config LLM server
 
     ```shell
     docker run --privileged \
     -p 8000:8000 \
     -it \
-    ccr-registry.caas.intel.com/cnbench/snapcontainer-llm:latest \
+    ccr-registry.caas.intel.com/cnbench/snapcontainer-llm-openvino-llama:latest \
     /bin/bash
     ```
 

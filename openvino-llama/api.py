@@ -89,7 +89,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--device', type=str, choices=["CPU", "GPU"], default="CPU", help='device for inference')
     parser.add_argument('-m', '--model-name', type=str,
-                        choices=["opt-1.3b", "llama2-7b", "chatglm2-6b", "gpt-j-6b"], help='LLM to load')
+                        choices=["llama2-7b"], help='LLM to load')
     parser.add_argument('-o', '--model-online',
                         action="store_true", help='Load model online')
     parser.add_argument('-d', '--model-path', type=str,
@@ -97,8 +97,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--port', type=int, help='Service port')
     parser.add_argument('-e', '--metric_port', type=int,
                         default=8090, help='Metric port')
-    parser.add_argument('-f', '--framework', type=str,
-                        help='Inference framework')
+    parser.add_argument('-f', '--framework', type=str, help='Inference framework')
     parser.add_argument('-t', '--model-dtype', type=str,
                         choices=["fp32", "fp16", "bf16", "int8", "int4"], help='Model data type')
     parser.add_argument('-i', '--ipex', action="store_true",

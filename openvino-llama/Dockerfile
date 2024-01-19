@@ -4,7 +4,6 @@ ENV PATH /opt/miniconda3/bin:$PATH
 
 WORKDIR /app
 COPY llama2-7b-ov-int8 /models/llama2-7b-ov-int8
-COPY opt-1.3b /models/opt-1.3b
 COPY api.py adapter.py model_worker.py utils.py ./
 
 ENV KMP_BLOCKTIME=1
